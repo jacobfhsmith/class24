@@ -1,0 +1,244 @@
+---
+title: "Shiny with R Markdown"
+author: ""
+date: "4-15-2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+runtime: shiny
+---
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+  fig.align = "center",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+### Main ideas
+
+### Coming up
+
+- Complete course evaluation in DukeHub
+  - If this gets above 50%, I will add 0.125 to everyone's final grade, if we get to 65%, I will add 0.25.
+- Project work
+  - I will send out information about a **very short** peer evaluation survey later in the week. 
+
+### Shiny with R Markdown
+
+```{r load-packages}
+library(tidyverse)
+library(shiny)
+```
+
+So far we have used R Markdown to create static reports for homeworks, labs, 
+and lecture notes. Today we are going to make R Markdown documents interactive.
+Readers will be able to interact with your report and see the results 
+immediately. You will also be able to share reports with friends and family 
+without them having to download `R` or `RStudio`.
+
+Note that the YAML header at the top of this file contains `runtime: shiny` and
+instead of the "Knit" button there is a "Run Document" button.
+
+Below are a few examples of Shiny applets. Choose one or two to run and try
+interacting with the applet. Then, examine `app.R` on the bottom of the page.
+
+**Question:** What do you notice when comparing the applet and `app.R`?
+
+```{r examples-shiny, eval = FALSE}
+runExample("01_hello") # a histogram
+runExample("02_text") # tables and data frames
+runExample("03_reactivity") # a reactive expression
+runExample("04_mpg") # global variables
+runExample("05_sliders") # slider bars
+runExample("06_tabsets") # tabbed panels
+runExample("07_widgets") # help text and submit buttons
+runExample("08_html") # Shiny app built from HTML
+runExample("09_upload") # file upload wizard
+runExample("10_download") # file download wizard
+runExample("11_timer") # an automated timer
+```
+
+Now try clicking "Run Document" at the top of this page.
+
+### Inputs and Outputs
+
+Shiny **inputs** are values obtained from the user. Shiny **outputs** are 
+updated automatically whenever inputs change. 
+
+In the code chunk, below we make a basic R plot interactive by wrapping it in 
+the Shiny `renderPlot()` function.
+
+The functions `selectInput()` and `sliderInput()` create the widgets that a user
+employs to adjust the plot.
+
+`selectInput()` has the name `n_bins` and allows the user to specify the number
+of bins in the histogram.
+
+`sliderInput()` has the name `alpha_adjust` and allows the user to specify the
+transparency.
+
+When generating the plot, we refer to these inputs as `input$n_bins` and 
+`input$alpha_adjust`.
+
+```{r shiny-plot-1, echo=FALSE}
+inputPanel(
+  selectInput("n_bins",
+    label = "Number of bins:",
+    choices = c(5, 10, 15, 20, 50), selected = 20
+  ),
+
+  sliderInput("alpha_adjust",
+    label = "Alpha adjustment:",
+    min = 0, max = 1, value = 1, step = .1
+  )
+)
+
+renderPlot({
+  ggplot(mpg, aes(x = cty)) +
+    geom_histogram(
+      bins = input$n_bins,
+      alpha = input$alpha_adjust
+    ) +
+    labs(
+      x = "City Miles per Gallon",
+      y = "",
+      title = "Histogram of Car Mileage"
+    )
+})
+```
+
+Using the template below, we  to create a Shiny app that generates a 
+scatterplot of `cty` versus `hwy` that allows users to color the points by 
+class.
+
+```{r shiny-plot-2, echo=FALSE, warning=FALSE}
+base_ggplot <- ggplot(mpg, aes(x = hwy, y = cty))
+
+inputPanel(
+  checkboxInput("type_check", "Color by car type?", value = FALSE)
+)
+renderPlot({
+  if (input$type_check) {
+    base_ggplot +
+      geom_jitter(aes(color = class)) +
+      labs(
+        x = "Highway miles per gallon",
+        y = "City miles per gallon",
+        title = "City versus highway mileage"
+      ) +
+      theme_bw()
+  } else if (!input$type_check) {
+    base_ggplot + geom_jitter() +
+      labs(
+        x = "Highway miles per gallon",
+        y = "City miles per gallon",
+        title = "City versus highway mileage"
+      ) +
+      theme_bw()
+  }
+})
+```
+
+Helpful inputs for collecting values from the user are provided below. See the
+Shiny cheatsheet and additional resources for more information.
+
+- `checkboxGroupInput()`
+- `checkboxInput()`
+- `fileInput()`
+- `numericInput()`
+- `radioButtons()`
+- `selectInput()`
+- `sliderInput()`
+- `textInput()`
+
+### Sharing Shiny Apps
+
+What if you wanted to share a Shiny applet without having a user download and 
+install `R` and `RStudio`?
+
+**Method #1**
+
+1. Create your Shiny app in an RMarkdown file. A template document
+  `first_shiny.Rmd` has already been created for you.
+  
+2. Create a new folder for your Shiny app (shiny_app)
+
+3. Create a new `R` script called `app.R` in your shiny_app folder. If you are 
+  using your own data, include it in a separate `data` folder in your app 
+  folder.
+
+4. Cut and paste the code from `first_shiny.Rmd` into `app.R` and convert your
+  code to ui-server format. You will have to add some ui wrapper code to your
+  inputs and some server wrapper code to your outputs. Check out the example 
+  code and the additional resources for help here.
+  
+Now you're ready to publish!
+
+5. Load the `rsconnect` package. 
+
+```{r load-rsconnect, eval = FALSE}
+library(rsconnect)
+```
+
+6. Authorize your account. Go to the website
+  [here](https://www.shinyapps.io/admin/) and log in with your GitHub password.
+  Then authorize your computer by copying and pasting the `setAccountInfo` code
+  into the console. You can access this by clicking "Tokens" in the upper-right
+  drop-down menu.
+  
+```{r run-app, eval = FALSE}
+runApp("shiny_app", display.mode = "showcase")
+```
+
+7. Type the code below to deploy your app. If you are using the Docker 
+  containers this will take several minutes. I recommend testing by clicking
+  "Run Document" and only deploying once when you are done.
+
+```{r deploy-app, eval = FALSE}
+deployApp("shiny_app")
+```
+
+After a few minutes, a browser window will open with your new application. 
+
+**Method #2**
+
+1. Create an R Markdown file to produce a shiny app and use `runtime: shiny` and
+`output: html_document`.
+
+2. Save any data to the same folder as the R Markdown file and read in the data.
+
+3. Hit Run Document.
+
+4. Hit the Publish icon in the upper right of the HTML viewer window and select
+  Publish.
+  
+5. Under Publish from Account, choose your shinyapps.io account. Make sure to 
+  set your token information.
+  
+6. Check your R Markdown and data files.
+
+7. Hit publish and obtain your URL to share.
+
+### Practice- this is optional, just if you want to practice using Shiny, I know you have a lot of work this week!
+
+Build on `first_shiny.Rmd` and `app.R` to create an effective applet that takes
+user inputs and visualizes coronavirus cases at Duke. You can consider the 
+elements below but be creative!
+
+- an input for selecting tests or positives
+- an input for selecting weekly or cumulative cases
+- an input for selecting semester 1 or semester 2 data
+- an input for selecting the positivity rate
+- output that displays the raw data
+- output that displays multiple plots
+- output that displays multiple panes
+
+### Additional Resources
+
+- [Shiny Cheatsheet](https://shiny.rstudio.com/images/shiny-cheatsheet.pdf)
+- [Authoring Shiny](https://rmarkdown.rstudio.com/authoring_shiny.html)
+- [Shiny Tutorials](https://shiny.rstudio.com/tutorial/written-tutorial/lesson1/)
+- [Datacamp on R Shiny](https://www.datacamp.com/courses/building-web-applications-in-r-with-shiny)
+- [Shiny Website](http://www.shinyapps.io/)

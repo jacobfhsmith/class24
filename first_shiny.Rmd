@@ -1,0 +1,34 @@
+---
+title: "Duke Coronavirus Dashboard"
+runtime: shiny
+output: html_document
+---
+
+```{r setup, include = FALSE, message = FALSE}
+library(tidyverse)
+covid <- read_csv("~/duke_covid.csv")
+```
+
+```{r, echo=FALSE, warning=FALSE}
+inputPanel(
+  selectInput("population",
+    label = "Select population:",
+    choices = c("students", "faculty & staff"), selected = "students"
+  )
+)
+renderPlot({
+  if (input$population == "students") {
+    ggplot(covid, aes(x = week_index, y = student_positive, color = semester)) +
+      geom_point() +
+      geom_line() +
+      labs(x = "Week Index", y = "Positives") +
+      theme_bw()
+  } else if (input$population == "faculty & staff") {
+    ggplot(covid, aes(x = week_index, y = fs_positive, color = semester)) +
+      geom_point() +
+      geom_line() +
+      labs(x = "Week Index", y = "Positives") +
+      theme_bw()
+  }
+})
+```
